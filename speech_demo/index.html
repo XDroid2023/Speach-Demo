@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Speech Demo</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            margin: 10px;
+            cursor: pointer;
+        }
+        textarea {
+            width: 100%;
+            height: 100px;
+            margin: 10px 0;
+            padding: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Speech Demo</h1>
+    
+    <h2>Text to Speech</h2>
+    <textarea id="textToSpeak" placeholder="Enter text to speak...">Hello! This is a speech demo.</textarea>
+    <br>
+    <button onclick="speak()">Speak</button>
+    <button onclick="stopSpeaking()">Stop</button>
+
+    <h2>Speech Recognition</h2>
+    <button onclick="startListening()">Start Listening</button>
+    <button onclick="stopListening()">Stop Listening</button>
+    <p id="recognitionResult">Recognition results will appear here...</p>
+
+    <script>
+        // Text to Speech
+        let synth = window.speechSynthesis;
+        let speaking = false;
+
+        function speak() {
+            if (speaking) {
+                stopSpeaking();
+                return;
+            }
+            
+            const text = document.getElementById('textToSpeak').value;
+            if (text !== '') {
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.onend = function() {
+                    speaking = false;
+                };
+                speaking = true;
+                synth.speak(utterance);
+            }
+        }
+
+        function stopSpeaking() {
+            if (synth) {
+                synth.cancel();
+                speaking = false;
+            }
+        }
+
+        // Speech Recognition
+        let recognition = null;
+        try {
+            recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+        } catch (e) {
+            console.error('Speech recognition not supported:', e);
+            document.getElementById('recognitionResult').textContent = 
+                'Speech recognition is not supported in this browser. Please try Chrome, Edge, or Safari.';
+        }
+
+        if (recognition) {
+            recognition.continuous = true;
+            recognition.interimResults = true;
+            recognition.lang = 'en-US';
+
+            recognition.onstart = function() {
+                document.getElementById('recognitionResult').textContent = 'Listening...';
+            };
+
+            recognition.onerror = function(event) {
+                console.error('Speech recognition error:', event.error);
+                document.getElementById('recognitionResult').textContent = 
+                    'Error: ' + event.error + '. Please try again.';
+            };
+
+            recognition.onend = function() {
+                document.getElementById('recognitionResult').textContent += ' (Stopped listening)';
+            };
+
+            recognition.onresult = function(event) {
+                const result = event.results[event.results.length - 1];
+                const transcript = result[0].transcript;
+                document.getElementById('recognitionResult').textContent = transcript;
+            };
+        }
+
+        function startListening() {
+            if (recognition) {
+                try {
+                    recognition.start();
+                } catch (e) {
+                    console.error('Error starting recognition:', e);
+                    if (e.name === 'InvalidStateError') {
+                        // Recognition is already started, stop it first
+                        recognition.stop();
+                        setTimeout(() => recognition.start(), 200);
+                    }
+                }
+            } else {
+                alert('Speech recognition is not supported in this browser.');
+            }
+        }
+
+        function stopListening() {
+            if (recognition) {
+                recognition.stop();
+            }
+        }
+
+        // Check if speech synthesis is supported
+        if (!synth) {
+            document.getElementById('textToSpeak').placeholder = 
+                'Speech synthesis is not supported in this browser.';
+            document.querySelector('button[onclick="speak()"]').disabled = true;
+            document.querySelector('button[onclick="stopSpeaking()"]').disabled = true;
+        }
+    </script>
+</body>
+</html>
